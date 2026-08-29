@@ -1,0 +1,31 @@
+# 云上一键部署：docker compose up -d
+# 访问 http://<服务器IP>:8787
+services:
+  knowledge-workbench:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: knowledge-workbench:0.1.0
+    container_name: knowledge-workbench
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      # 生产环境强烈建议设置：所有 /api/* 需要 Authorization: Bearer <token>
+      KB_API_TOKEN: ${KB_API_TOKEN:-}
+      # 凭证加密主密钥；更换后旧凭证需重新录入
+      KB_MASTER_KEY: ${KB_MASTER_KEY:-}
+      KB_SYNC_INTERVAL_MINUTES: ${KB_SYNC_INTERVAL_MINUTES:-120}
+      KB_SYNC_ON_BOOT: ${KB_SYNC_ON_BOOT:-false}
+      # 企业内网走代理时可配置
+      KB_HTTP_PROXY: ${KB_HTTP_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1}
+    volumes:
+      # 索引与文档落盘，容器重建不丢数据
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

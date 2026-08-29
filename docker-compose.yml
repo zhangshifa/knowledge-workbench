@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  knowledge-workbench:
+    build: .
+    image: knowledge-workbench:latest
+    container_name: knowledge-workbench
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      # 如需接口鉴权，设置 KB_API_TOKEN（下方 .env 或 secrets 注入）
+      KB_HOST: "0.0.0.0"
+      KB_PORT: "8787"
+      KB_DATA_DIR: "/app/data"
+      KB_SYNC_INTERVAL_MINUTES: "120"
+      KB_SYNC_ON_BOOT: "true"
+      # 凭证加密主密钥：务必在云上设置为强随机值（不随仓库提交）
+      # KB_MASTER_KEY: "${KB_MASTER_KEY}"
+    volumes:
+      - kb-data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  kb-data:

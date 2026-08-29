@@ -1,0 +1,16 @@
+{
+  "name": "knowledge-workbench-desktop",
+  "version": "0.1.0",
+  "description": "知识库工作台桌面端（Electron 壳：本地拉起服务 + 窗口）",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "desktop": "electron .",
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "license": "MIT",
+  "dependencies": {}
+}

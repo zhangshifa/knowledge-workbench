@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1117" />
+  <title>知识库工作台 · Knowledge Workbench</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234f7cff'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='sans-serif'%3EK%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="菜单">☰</button>
+      <div class="brand">知识库工作台</div>
+      <form class="search-box" id="searchForm">
+        <input id="searchInput" type="search" placeholder="跨库检索：需求、部署、API…（支持中英文）" autocomplete="off" />
+        <button type="submit" class="search-btn">检索</button>
+      </form>
+      <div class="top-actions">
+        <span id="statBadge" class="badge">—</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-head">
+          <span>数据源</span>
+          <button class="icon-btn" id="addSourceBtn" title="新增数据源">＋</button>
+        </div>
+        <ul class="source-list" id="sourceList"></ul>
+        <div class="sidebar-foot">
+          <button class="link-btn" id="exportBtn">导出知识库</button>
+          <span class="muted">本地优先 · 零依赖 · 可云端</span>
+        </div>
+      </aside>
+
+      <main class="content" id="content">
+        <div class="placeholder" id="placeholder">
+          <h1>把分散的知识，收敛到一处</h1>
+          <p>支持 ShowDoc / GitHub / Gitee / 禅道 / 印象笔记 / 腾讯文档，也支持以 MCP 或通用 HTTP 接入任意系统。</p>
+          <p>点击左上角 <b>＋</b> 新增一个数据源（一个链接 + 一个凭证即可），然后随时在顶部全局检索。</p>
+        </div>
+        <div id="resultView" class="hidden"></div>
+      </main>
+    </div>
+  </div>
+
+  <!-- 新增/编辑数据源 弹窗 -->
+  <div class="modal hidden" id="sourceModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="modalTitle">新增数据源</h2>
+        <button class="icon-btn" id="modalClose">✕</button>
+      </div>
+      <form id="sourceForm" class="form">
+        <label>平台
+          <select id="fPlatform" required></select>
+        </label>
+        <label>名称
+          <input id="fName" placeholder="我的研发知识库" />
+        </label>
+        <label>链接（Base URL）
+          <input id="fBaseUrl" placeholder="https://" />
+        </label>
+        <label>凭证（api_key/token/账号密码，按平台要求填写）
+          <input id="fCredential" type="password" autocomplete="off" placeholder="一个凭证即可接入" />
+        </label>
+        <label>同步周期（分钟，0 = 仅手动）
+          <input id="fInterval" type="number" value="120" min="0" />
+        </label>
+        <label>高级选项（JSON，可空）
+          <textarea id="fOptions" rows="4" placeholder='{"repos":"owner/repo","include":"\\.(md|txt)$"}'></textarea>
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn ghost" id="testBtn">测试连接</button>
+          <span id="testMsg" class="muted"></span>
+          <span class="spacer"></span>
+          <button type="button" class="btn ghost" id="cancelBtn">取消</button>
+          <button type="submit" class="btn primary">保存并同步</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

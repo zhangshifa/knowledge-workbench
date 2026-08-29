@@ -1,0 +1,30 @@
+{
+  "$schema": "https://framework-openapi.code,tencent.com/schema/cloudbase.json",
+  "envId": "{{env.ENV_ID}}",
+  "framework": {
+    "name": "knowledge-workbench",
+    "plugins": {
+      "node-container": {
+        "use": "@cloudbase/framework-plugin-container",
+        "inputs": {
+          "serviceName": "knowledge-workbench",
+          "servicePath": "/",
+          "localDir": ".",
+          "dockerfilePath": "Dockerfile",
+          "buildCommand": "",
+          "containerOptions": {
+            "cpu": 1,
+            "mem": 2,
+            "minNum": 0,
+            "maxNum": 2,
+            "envVariables": {
+              "KB_HOST": "0.0.0.0",
+              "KB_PORT": "8787",
+              "KB_SYNC_ON_BOOT": "true"
+            }
+          }
+        }
+      }
+    }
+  }
+}

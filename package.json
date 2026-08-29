@@ -1,0 +1,19 @@
+{
+  "name": "knowledge-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "统一知识库工作台：一个链接 + 一个凭证，整合 ShowDoc / GitHub / Gitee / 禅道 / 印象笔记 / 腾讯文档，支持 MCP 双向、本地与云上部署、Web / 桌面 / 移动三端可用",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server/src/index.js",
+    "dev": "node --watch server/src/index.js",
+    "mcp": "node server/scripts/mcp-stdio.js",
+    "selftest": "node server/scripts/selftest.js"
+  },
+  "dependencies": {},
+  "keywords": ["知识库", "知识管理", "MCP", "ShowDoc", "GitHub", "Gitee", "禅道", "印象笔记", "腾讯文档"],
+  "license": "MIT"
+}
