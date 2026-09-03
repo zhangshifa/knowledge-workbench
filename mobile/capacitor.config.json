@@ -1,0 +1,14 @@
+{
+  "appId": "com.zhangshifa.knowledgeworkbench",
+  "appName": "知识库工作台",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {},
+  "cordova": {}
+}

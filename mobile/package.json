@@ -1,0 +1,22 @@
+{
+  "name": "knowledge-workbench-mobile",
+  "version": "0.2.0",
+  "description": "知识库工作台 Android 端：Capacitor 封装网页，连接本地或云上的 Python 服务",
+  "private": true,
+  "scripts": {
+    "sync-web": "node scripts/sync-web.mjs",
+    "add:android": "npm run sync-web && npx cap add android",
+    "sync": "npm run sync-web && npx cap sync android",
+    "open:android": "npx cap open android",
+    "build:debug": "npm run sync && cd android && gradlew assembleDebug",
+    "build:release": "npm run sync && cd android && gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/cli": "^6.1.2"
+  },
+  "license": "MIT"
+}

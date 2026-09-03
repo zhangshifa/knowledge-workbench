@@ -64,6 +64,19 @@
 ### `DELETE /api/sources/:id`
 删除数据源并移除其已同步文档。
 
+### `GET /api/sources/export`
+导出**接入配置**（不含明文凭证），便于换机器或团队复用：
+```json
+{ "sources": [ { "name": "本地文档", "platform": "local", "baseUrl": "", "options": { "dir": "/data/docs" }, "enabled": true, "syncIntervalMinutes": 120, "credentialMasked": "" } ] }
+```
+
+### `POST /api/sources/import`
+导入接入配置，批量创建数据源：
+```json
+{ "sources": [ { "name": "本地文档", "platform": "local", "options": { "dir": "/data/docs" }, "credential": "可选，导入时补齐" } ] }
+```
+返回 `{ "ok": true, "created": 1, "skipped": [], "sources": [...] }`；平台未知或被禁用时记入 `skipped`。
+
 ### `POST /api/sources/test`
 用临时参数测试连接（不落库）：
 ```json

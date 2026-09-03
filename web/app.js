@@ -1,13 +1,25 @@
 // 知识库工作台 前端（零构建，原生 ES Module）
-const API = '/api';
+// 服务地址可配置：同源（默认）或远程服务（供 Android APK / 跨域场景使用）
+const API_BASE_KEY = 'kb.apiBase';   // 例如 http://192.168.1.10:8787，留空 = 同源
+const TOKEN_KEY = 'kb.apiToken';     // 对应服务端的 KB_API_TOKEN
+
+function apiBase() {
+  return (localStorage.getItem(API_BASE_KEY) || '').replace(/\/+$/, '');
+}
+function apiToken() {
+  return localStorage.getItem(TOKEN_KEY) || '';
+}
 
 const $ = (sel) => document.querySelector(sel);
 const state = { sources: [], current: null, query: '', doc: null };
 
 async function api(path, opts = {}) {
-  const res = await fetch(API + path, {
+  const headers = opts.body ? { 'Content-Type': 'application/json' } : {};
+  const token = apiToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(apiBase() + '/api' + path, {
     method: opts.method || 'GET',
-    headers: opts.body ? { 'Content-Type': 'application/json' } : undefined,
+    headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
   if (!res.ok) {
@@ -276,7 +288,94 @@ $('#sourceForm').onsubmit = async (e) => {
 };
 
 $('#exportBtn').onclick = () => {
-  window.open(API + '/export', '_blank');
+  window.open(apiBase() + '/api/export', '_blank');
+};
+
+// ---- 接入配置 导入/导出（换机器或团队协作时复用同一套数据源配置） ----
+function download(filename, text) {
+  const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+$('#exportCfgBtn').onclick = async () => {
+  try {
+    const data = await api('/sources/export');
+    download('kb-sources-config.json', JSON.stringify({ sources: data.sources }, null, 2));
+    toast(`已导出 ${data.sources.length} 个数据源配置（不含明文凭证）`);
+  } catch (e) {
+    toast('导出失败：' + e.message, true);
+  }
+};
+
+$('#importCfgBtn').onclick = () => $('#cfgFile').click();
+
+$('#cfgFile').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    const r = await api('/sources/import', { method: 'POST', body: payload });
+    toast(`已导入 ${r.created} 个数据源${r.skipped && r.skipped.length ? `，跳过 ${r.skipped.length} 个` : ''}；请补充凭证后同步`);
+    await loadSources();
+  } catch (err) {
+    toast('导入失败：' + err.message, true);
+  } finally {
+    e.target.value = '';
+  }
+});
+
+// ---- 服务设置（远程服务 / 接口 Token） ----
+function openSettings() {
+  $('#sApiBase').value = apiBase();
+  $('#sToken').value = apiToken();
+  $('#sHint').textContent = apiBase()
+    ? `当前：${apiBase()}${apiToken() ? '（已启用 Token 鉴权）' : '（无鉴权）'}`
+    : '当前：与网页同源（浏览器 / Electron / Docker 部署常用）';
+  $('#settingsModal').classList.remove('hidden');
+}
+
+$('#settingsBtn').onclick = openSettings;
+$('#settingsClose').onclick = () => $('#settingsModal').classList.add('hidden');
+$('#settingsCancel').onclick = () => $('#settingsModal').classList.add('hidden');
+$('#settingsReset').onclick = () => {
+  localStorage.removeItem(API_BASE_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+  toast('已恢复同源模式');
+  location.reload();
+};
+
+$('#settingsTest').onclick = async () => {
+  const base = $('#sApiBase').value.trim().replace(/\/+$/, '');
+  const token = $('#sToken').value.trim();
+  $('#sHint').textContent = '测试中…';
+  try {
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(base + '/api/health', { headers, cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = await res.json();
+    $('#sHint').textContent = `✓ 连通（${j.runtime || 'server'} v${j.version || '-'}）`;
+    $('#sHint').style.color = 'var(--ok)';
+  } catch (e) {
+    $('#sHint').textContent = '✗ 无法连接：' + e.message;
+    $('#sHint').style.color = 'var(--bad)';
+  }
+};
+
+$('#settingsForm').onsubmit = (e) => {
+  e.preventDefault();
+  const base = $('#sApiBase').value.trim().replace(/\/+$/, '');
+  const token = $('#sToken').value.trim();
+  if (base) localStorage.setItem(API_BASE_KEY, base);
+  else localStorage.removeItem(API_BASE_KEY);
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+  toast('已保存，正在重新载入…');
+  setTimeout(() => location.reload(), 500);
 };
 
 // ---- 搜索框 ----
@@ -297,12 +396,18 @@ $('#resultView').addEventListener('click', (e) => {
 
 // ---- 启动 ----
 (async function init() {
+  // APK / 本地文件方式打开时，没有同源后端，必须先配置服务地址
+  if (!apiBase() && !/^https?:$/.test(location.protocol)) {
+    openSettings();
+    toast('请先配置知识库服务地址');
+    return;
+  }
   try {
     await loadSources();
   } catch (e) {
     toast('服务未启动或不可达：' + e.message, true);
   }
-  if ('serviceWorker' in navigator) {
+  if (/^https?:$/.test(location.protocol) && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 })();

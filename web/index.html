@@ -6,7 +6,8 @@
   <meta name="theme-color" content="#0f1117" />
   <title>知识库工作台 · Knowledge Workbench</title>
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234f7cff'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='white' font-family='sans-serif'%3EK%3C/text%3E%3C/svg%3E" />
+  <link rel="icon" type="image/svg+xml" href="icon.svg" />
+  <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -19,6 +20,7 @@
         <button type="submit" class="search-btn">检索</button>
       </form>
       <div class="top-actions">
+        <button class="icon-btn" id="settingsBtn" title="服务设置">⚙</button>
         <span id="statBadge" class="badge">—</span>
       </div>
     </header>
@@ -31,8 +33,11 @@
         </div>
         <ul class="source-list" id="sourceList"></ul>
         <div class="sidebar-foot">
-          <button class="link-btn" id="exportBtn">导出知识库</button>
-          <span class="muted">本地优先 · 零依赖 · 可云端</span>
+          <button class="link-btn" id="exportBtn">导出知识库内容</button>
+          <button class="link-btn" id="exportCfgBtn">导出接入配置</button>
+          <button class="link-btn" id="importCfgBtn">导入接入配置</button>
+          <input type="file" id="cfgFile" accept="application/json,.json" class="hidden" />
+          <span class="muted">Web / 桌面 / 移动 · 本地优先 · 可云端</span>
         </div>
       </aside>
 
@@ -80,6 +85,33 @@
           <button type="button" class="btn ghost" id="cancelBtn">取消</button>
           <button type="submit" class="btn primary">保存并同步</button>
         </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 服务设置 弹窗 -->
+  <div class="modal hidden" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>服务设置</h2>
+        <button class="icon-btn" id="settingsClose">✕</button>
+      </div>
+      <form id="settingsForm" class="form">
+        <label>知识库服务地址（留空 = 与网页同源）
+          <input id="sApiBase" placeholder="http://192.168.1.10:8787" autocomplete="off" />
+        </label>
+        <label>接口 Token（服务端设置了 KB_API_TOKEN 时填写）
+          <input id="sToken" type="password" autocomplete="off" placeholder="留空表示无需鉴权" />
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn ghost" id="settingsTest">测试连接</button>
+          <span id="sHint" class="muted"></span>
+          <span class="spacer"></span>
+          <button type="button" class="btn ghost" id="settingsReset">恢复同源</button>
+          <button type="button" class="btn ghost" id="settingsCancel">取消</button>
+          <button type="submit" class="btn primary">保存</button>
+        </div>
+        <p class="muted">Android APK 内网页运行在本地容器中，需在此填入 Python 服务地址（同一局域网或公网域名）；若服务暴露在公网，请务必配置 Token 并使用 HTTPS。</p>
       </form>
     </div>
   </div>

@@ -1,0 +1,27 @@
+# 知识库工作台 — Python 版镜像（标准库即可运行，无需 pip install）
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY server_py/ ./server_py/
+COPY web/ ./web/
+COPY docs/ ./docs/
+
+# 可选：安装 cryptography 以启用与 Node 版互通的 AES-256-GCM
+# RUN pip install --no-cache-dir cryptography
+
+ENV KB_HOST=0.0.0.0 \
+    KB_PORT=8787 \
+    KB_DATA_DIR=/app/data \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app/server_py
+
+VOLUME ["/app/data"]
+EXPOSE 8787
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8787/api/health', timeout=3).status==200 else 1)"
+
+CMD ["python", "main.py", "serve"]

@@ -8,11 +8,30 @@ const http = require('http');
 const PORT = Number(process.env.KB_PORT || 8787);
 const ROOT = path.resolve(__dirname, '..'); // 仓库根
 const DATA_DIR = path.join(ROOT, 'data');
-const NODE_BIN = process.env.KB_NODE_BIN || 'node'; // 需本机已安装 Node >= 18（加入 PATH）
+const PYTHON_BIN = process.env.KB_PYTHON_BIN || 'python';
+const NODE_BIN = process.env.KB_NODE_BIN || 'node';
 
 let win = null;
 let serverProc = null;
 let starting = false;
+
+/** 选择运行时：默认 Python，未装 Python 时回退 Node（可用 KB_RUNTIME 强制指定） */
+function pickRuntime() {
+  const forced = (process.env.KB_RUNTIME || '').toLowerCase();
+  const { spawnSync } = require('child_process');
+  const has = (bin, args) => {
+    try {
+      const r = spawnSync(bin, args, { stdio: 'ignore', timeout: 8000 });
+      return r.status === 0;
+    } catch {
+      return false;
+    }
+  };
+  if (forced === 'node') return { bin: NODE_BIN, args: [path.join(ROOT, 'server', 'src', 'index.js')], runtime: 'node' };
+  if (forced === 'python') return { bin: PYTHON_BIN, args: [path.join(ROOT, 'server_py', 'main.py'), 'serve'], runtime: 'python' };
+  if (has(PYTHON_BIN, ['--version'])) return { bin: PYTHON_BIN, args: [path.join(ROOT, 'server_py', 'main.py'), 'serve'], runtime: 'python' };
+  return { bin: NODE_BIN, args: [path.join(ROOT, 'server', 'src', 'index.js')], runtime: 'node' };
+}
 
 function waitHealth(timeoutMs = 20000) {
   const deadline = Date.now() + timeoutMs;
@@ -35,9 +54,11 @@ function waitHealth(timeoutMs = 20000) {
 async function startServer() {
   if (starting) return;
   starting = true;
+  const rt = pickRuntime();
+  console.log(`[desktop] runtime = ${rt.runtime} (${rt.bin})`);
   serverProc = spawn(
-    NODE_BIN,
-    [path.join(ROOT, 'server', 'src', 'index.js')],
+    rt.bin,
+    rt.args,
     {
       env: {
         ...process.env,

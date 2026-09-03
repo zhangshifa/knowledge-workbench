@@ -10,9 +10,10 @@
 - **双向 MCP**：
   - 作为 **MCP 客户端** —— 把任意暴露 MCP 的服务器当成知识源接入；
   - 作为 **MCP 服务端** —— 让 Claude Desktop / 各类 IDE / Agent 直接检索与阅读你的知识库。
-- **三端一致**：Web / 移动（PWA，可加到主屏）/ 桌面（Electron）共用同一套前端与同一份后端数据。
-- **本地优先，云上可选**：服务端**零第三方依赖**（仅 Node ≥ 18 内置模块），不联网也能跑；一条 `docker compose up` 即可上云。
-- **凭据不裸奔**：数据库落地的凭证一律 `AES-256-GCM` 加密，API 永不回显明文。
+- **四端一致**：Web / 移动（PWA，可加到主屏）/ 桌面（Electron）/ Android（Capacitor APK）共用**同一套前端代码**与同一份数据。
+- **双运行时**：Node 版（`server/`）与 **Python 版（`server_py/`）** 接口完全兼容，任选其一；Python 版用标准库即可运行。
+- **本地优先，云上可选**：服务端零第三方依赖，不联网也能跑；一条 `docker compose up` 即可上云。
+- **凭据不裸奔**：落地的凭证一律加密（AES-256-GCM，无 cryptography 时自动回退标准库实现），API 永不回显明文。
 
 ## 功能矩阵
 
@@ -26,21 +27,29 @@
 | 腾讯文档接入 | ✅ 开放平台 API / 导出文件目录 |
 | MCP 方式整合 | ✅ 客户端 + 服务端 |
 | 通用 HTTP 接入 | ✅ 可配置字段映射 |
-| 本地部署 | ✅ `node server/src/index.js` |
-| 云上部署 | ✅ Docker / Compose / 云托管 / GHCR |
-| 三端可用 | ✅ Web / 移动 PWA / 桌面 Electron |
+| 本地部署 | ✅ `python server_py/main.py serve` 或 `node server/src/index.js` |
+| 云上部署 | ✅ Docker / Compose / 云托管 / GHCR（Node 与 Python 双镜像） |
+| 四端可用 | ✅ Web / 移动 PWA / 桌面 Electron / Android APK |
 | 检索 | ✅ 中英文混合分词 + BM25 倒排 |
-| 定时同步 | ✅ 增量、断点续传、失败隔离 |
+| 定时同步 | ✅ 增量、失败隔离 |
 
-## 快速开始（本地）
+## 快速开始（Python，推荐）
 
 ```bash
-# 需要 Node.js ≥ 18
-node server/src/index.js
-# 浏览器打开 http://127.0.0.1:8787
+cd server_py
+python main.py serve                # 默认 127.0.0.1:8787
+python main.py serve --host 0.0.0.0 # 局域网 / 公网可访问
+# 浏览器打开 http://127.0.0.1:8787 —— 这就是网页端
 ```
 
-无需 `npm install` —— 服务端零依赖。
+- Python ≥ 3.9，**无需 pip install 任何包**
+- 装了 `cryptography` 则启用 AES-256-GCM，与 Node 版密文互通、数据目录可共用
+
+## 快速开始（Node，等价可选）
+
+```bash
+node server/src/index.js            # Node ≥ 18，零依赖
+```
 
 ## 快速开始（Docker / 云）
 
@@ -51,6 +60,32 @@ docker compose up -d --build
 
 镜像构建与推送已在 `.github/workflows/ci.yml` 配置，推送 `main` 即自动构建并推送至
 `ghcr.io/zhangshifa/knowledge-workbench`。
+
+## 三端怎么用
+
+| 端 | 怎么起 | 说明 |
+|---|---|---|
+| **Web（网页）** | 双击 `start-windows.bat`（或 `./start.sh`），浏览器自动打开 `http://127.0.0.1:8787` | 一键启动器：优先 Python，没装 Python 自动回退 Node |
+| **桌面（Electron）** | `cd desktop && npm i && npm run desktop` | 自动拉起本地服务（默认 Python，可用 `KB_RUNTIME=node` 切换）并开窗口 |
+| **移动（Android APK）** | `cd mobile && npm i && npm run build:debug`，或直接用 Actions 产出的 APK | Capacitor 封装 `web/`，首次打开点 ⚙ 填服务地址即可 |
+
+三端共用**同一份前端代码**（`web/`）与**同一份数据**（`data/`），功能不会漂移。
+
+### 一键启动器
+
+- Windows：双击 `start-windows.bat`
+- Linux / macOS：`./start.sh`
+
+启动器会自动：设置数据目录 → 选择运行时（Python 优先）→ 3 秒后打开浏览器 → 前台运行服务（Ctrl+C 停止）。
+
+### 方便整合：接入配置导入 / 导出
+
+换机器或团队协作时不必重填一遍数据源：
+
+- 侧边栏「**导出接入配置**」→ 得到 `kb-sources-config.json`（**不含明文凭证**）
+- 新环境「**导入接入配置**」→ 一次性创建全部数据源，再逐个补凭证、点同步
+
+对应接口：`GET /api/sources/export`、`POST /api/sources/import`。
 
 ## 添加第一个数据源
 
@@ -74,13 +109,15 @@ docker compose up -d --build
 {
   "mcpServers": {
     "knowledge-workbench": {
-      "command": "node",
-      "args": ["server/scripts/mcp-stdio.js"],
+      "command": "python",
+      "args": ["server_py/main.py", "mcp"],
       "env": { "KB_DATA_DIR": "./data" }
     }
   }
 }
 ```
+
+> Node 版等价配置为 `["server/scripts/mcp-stdio.js"]`。
 
 提供工具：`kb_search` / `kb_get_document` / `kb_list_sources` / `kb_list_documents` / `kb_sync_source`；
 资源：`kb://doc/{id}`。
@@ -99,10 +136,13 @@ docker compose up -d --build
 
 | 形态 | 方式 | 说明 |
 |---|---|---|
-| 本地 | `node server/src/index.js` | 默认绑定 127.0.0.1，数据落 `./data` |
+| 本地（Python） | `python server_py/main.py serve` | 默认绑定 127.0.0.1，数据落 `./data` |
+| 本地（Node） | `node server/src/index.js` | 与 Python 版接口、数据格式兼容 |
+| 网页 | 启动上述任一服务，浏览器直接打开 | Python 服务内置静态托管，网页端即同源站点 |
 | 桌面 | `cd desktop && npm i && npm run desktop` | Electron 拉起本地服务 + 窗口 |
-| 移动 | 浏览器打开同一地址 → 加到主屏 | PWA，离线可访问外壳 |
-| 云（容器） | `docker compose up -d` | 挂载 `kb-data` 卷持久化 |
+| 移动 | 手机浏览器打开同一地址 → 加到主屏 | PWA，离线可访问外壳 |
+| Android APK | `cd mobile && npm i && npm run build:debug` | Capacitor 封装 `web/`，启动时配置服务地址 |
+| 云（容器） | `docker compose up -d` | 挂载 `kb-data` 卷持久化；Python 镜像见 `deploy/Dockerfile.python` |
 | 云（托管） | `deploy/cloudbase/cloudbaserc.json` | 腾讯云 CloudBase 云托管 |
 
 详见 [`docs/03-部署指南.md`](docs/03-部署指南.md)。
@@ -122,6 +162,9 @@ docker compose up -d --build
 - [`docs/04-MCP接入说明.md`](docs/04-MCP接入说明.md) — MCP 双向
 - [`docs/05-数据源接入手册.md`](docs/05-数据源接入手册.md) — 六平台 + 通用接入参数
 - [`docs/06-API接口文档.md`](docs/06-API接口文档.md) — REST API
+- [`docs/07-Python运行手册.md`](docs/07-Python运行手册.md) — 本地 / 网页用 Python 运行
+- [`docs/08-APK打包指南.md`](docs/08-APK打包指南.md) — Capacitor 封装网页为 Android APK
+- [`docs/09-需求补充-Python与APK.md`](docs/09-需求补充-Python与APK.md) — 第 2 轮需求（原文存档）与验收标准
 
 ## 许可证
 

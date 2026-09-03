@@ -129,6 +129,52 @@ export function createServer(store, scheduler) {
         }
       }
 
+      // ---- 配置导出 / 导入：方便在多台机器间复用同一套接入配置 ----
+      // 同样必须先于 /api/sources/:id 匹配
+      if (pathname === '/api/sources/export' && method === 'GET') {
+        const cfg = store.listSources().map((s) => ({
+          name: s.name,
+          platform: s.platform,
+          baseUrl: s.baseUrl,
+          options: s.options || {},
+          enabled: s.enabled !== false,
+          syncIntervalMinutes: s.syncIntervalMinutes,
+          credentialMasked: s.credentialMasked || ''
+        }));
+        return send(res, 200, { sources: cfg });
+      }
+
+      if (pathname === '/api/sources/import' && method === 'POST') {
+        const body = await readJson(req);
+        const created = [];
+        const skipped = [];
+        for (const item of body.sources || []) {
+          if (!item.platform || !getConnector(item.platform)) {
+            skipped.push({ name: item.name, reason: '未知平台' });
+            continue;
+          }
+          created.push(store.maskSource(store.createSource(item)));
+        }
+        return send(res, 200, { ok: true, created: created.length, skipped, sources: created });
+      }
+
+      // 注意：/api/sources/test 必须先于 /api/sources/:id 匹配，否则会被当作 id="test"
+      if (pathname === '/api/sources/test' && method === 'POST') {
+        const body = await readJson(req);
+        const conn = getConnector(body.platform);
+        if (!conn) return send(res, 400, { error: '未知平台' });
+        try {
+          const r = await conn.test({
+            baseUrl: body.baseUrl,
+            credential: body.credential,
+            options: body.options || {}
+          });
+          return send(res, 200, { ok: true, ...r });
+        } catch (e) {
+          return send(res, 400, { ok: false, error: errMessage(e) });
+        }
+      }
+
       let m;
       if ((m = srcOne.exec(pathname))) {
         const id = m[1];
@@ -164,23 +210,6 @@ export function createServer(store, scheduler) {
             error: errMessage(e)
           });
           return send(res, 502, { ok: false, error: errMessage(e) });
-        }
-      }
-
-      // ---- 连接测试（不落库） ----
-      if (pathname === '/api/sources/test' && method === 'POST') {
-        const body = await readJson(req);
-        const connector = getConnector(body.platform);
-        if (!connector) return send(res, 400, { error: '未知平台' });
-        try {
-          const r = await connector.test({
-            baseUrl: body.baseUrl,
-            credential: body.credential,
-            options: body.options || {}
-          });
-          return send(res, 200, { ok: true, ...r });
-        } catch (e) {
-          return send(res, 400, { ok: false, error: errMessage(e) });
         }
       }
 
